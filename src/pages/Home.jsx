@@ -1,31 +1,42 @@
-import { useState } from 'react';
-import { useAllProducts, useProductsByCategory } from '../hooks/useProducts';
+import { useState, useEffect } from 'react';
+import { useFirestoreProducts } from '../hooks/useProducts';
+import { seedProducts } from '../utils/seedProducts';
 import ProductCard from '../components/ProductCard';
-import CategoryFilter from '../components/CategoryFilter';
 import './Home.css';
 
 export default function Home() {
+  const { data: products, isLoading, isError } = useFirestoreProducts();
   const [selectedCategory, setSelectedCategory] = useState('');
 
-  const allProducts = useAllProducts();
-  const categoryProducts = useProductsByCategory(selectedCategory);
+  useEffect(() => {
+    seedProducts();
+  }, []);
 
-  const { data: products, isLoading, isError } = selectedCategory
-    ? categoryProducts
-    : allProducts;
+  const categories = products
+    ? ['', ...new Set(products.map(p => p.category))]
+    : [''];
+
+  const filtered = selectedCategory
+    ? products?.filter(p => p.category === selectedCategory)
+    : products;
 
   return (
     <main className="home">
       <div className="home-header">
         <h1>Our Products</h1>
-        <CategoryFilter selected={selectedCategory} onChange={setSelectedCategory} />
+        <div className="category-filter">
+          <label htmlFor="cat">Filter by Category:</label>
+          <select id="cat" value={selectedCategory} onChange={e => setSelectedCategory(e.target.value)}>
+            {categories.map(cat => (
+              <option key={cat} value={cat}>{cat || 'All Products'}</option>
+            ))}
+          </select>
+        </div>
       </div>
-
       {isLoading && <div className="status-msg">Loading products...</div>}
-      {isError && <div className="status-msg error">Failed to load products. Please try again.</div>}
-
+      {isError && <div className="status-msg error">Failed to load products.</div>}
       <div className="product-grid">
-        {products?.map(product => (
+        {filtered?.map(product => (
           <ProductCard key={product.id} product={product} />
         ))}
       </div>

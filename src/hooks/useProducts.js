@@ -1,31 +1,45 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { db } from '../firebase/config';
+import {
+  collection, getDocs, addDoc, updateDoc, deleteDoc, doc
+} from 'firebase/firestore';
 
-const BASE = 'https://fakestoreapi.com';
-
-export const useAllProducts = () =>
+export const useFirestoreProducts = () =>
   useQuery({
-    queryKey: ['products'],
+    queryKey: ['firestoreProducts'],
     queryFn: async () => {
-      const res = await fetch(`${BASE}/products`);
-      return res.json();
+      const snapshot = await getDocs(collection(db, 'products'));
+      return snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
     },
   });
 
-export const useCategories = () =>
-  useQuery({
-    queryKey: ['categories'],
-    queryFn: async () => {
-      const res = await fetch(`${BASE}/products/categories`);
-      return res.json();
+export const useAddProduct = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (product) => {
+      const docRef = await addDoc(collection(db, 'products'), product);
+      return docRef.id;
     },
+    onSuccess: () => queryClient.invalidateQueries(['firestoreProducts']),
   });
+};
 
-export const useProductsByCategory = (category) =>
-  useQuery({
-    queryKey: ['products', category],
-    queryFn: async () => {
-      const res = await fetch(`${BASE}/products/category/${category}`);
-      return res.json();
+export const useUpdateProduct = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, updates }) => {
+      await updateDoc(doc(db, 'products', id), updates);
     },
-    enabled: !!category,
+    onSuccess: () => queryClient.invalidateQueries(['firestoreProducts']),
   });
+};
+
+export const useDeleteProduct = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id) => {
+      await deleteDoc(doc(db, 'products', id));
+    },
+    onSuccess: () => queryClient.invalidateQueries(['firestoreProducts']),
+  });
+};
