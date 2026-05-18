@@ -23,7 +23,7 @@ export default function CartPage() {
       await placeOrder(user.uid, items, totalPrice);
       dispatch(clearCart());
       setCheckedOut(true);
-    } catch (err) {
+    } catch {
       setError('Checkout failed. Please try again.');
     }
   };
